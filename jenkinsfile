@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_TAG = "mdrajibkhan/mysampleimage:${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Pulling the source code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/page-cloud/jenkinsfile-custom-test.git'
+            }
+        }
+        
+        stage('Build and Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USER')]) {
+                    sh """
+                        docker build -t ${IMAGE_TAG} .
+                        docker login -u $DOCKER_HUB_USER -p$DOCKER_HUB_PASSWORD
+                        docker push ${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+        
+        stage('Update Kubernetes Manifest') {
+            steps {
+                sh """
+                    sed -i "s#mdrajibkhan/mysampleimage:.*#mdrajibkhan/mysampleimage:${BUILD_NUMBER}#" nginx-deploy.yaml
+                    cat nginx-deploy.yaml
+                """
+            }
+        }
+
+        stage('Commit and Push Updated Manifest') {
+            steps {
+                withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                    sh """
+                        git config --global user.email "jenkins@example.com"
+                        git config --global user.name "Jenkins"
+                        git add .
+                        git commit -m "Update Kubernetes manifest with new image tag ${IMAGE_TAG}"
+                        git push https://github-username:${GITHUB_TOKEN}@github.com/page-cloud/jenkinsfile-custom-test.git main
+                    """
+                }
+            }
+        }
+    }
+}
+
