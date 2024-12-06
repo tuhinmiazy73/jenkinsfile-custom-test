@@ -1,4 +1,3 @@
-# jenkinsfile-custom-test
 
 # run jenkins in docker container
 
