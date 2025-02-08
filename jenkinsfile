@@ -17,7 +17,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'tuhin200', passwordVariable: 'DOCKER_HUB_PASSWORD', usernameVariable: 'DOCKER_HUB_USER')]) {
                     sh """
                         docker build -t ${IMAGE_TAG} .
-                        docker login -u $DOCKER_HUB_USER -p$DOCKER_HUB_PASSWORD
+                        echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin
                         docker push ${IMAGE_TAG}
                     """
                 }
@@ -35,17 +35,18 @@ pipeline {
 
         stage('Commit and Push Updated Manifest') {
             steps {
-                withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKENS')]) {
-                    sh """
-                        git config --global user.email "tuhinmiazy73@gmail.com"
-                        git config --global user.name "tuhinmiazy73"
-                        git add .
-                        git commit -m "Update Kubernetes manifest with new image tag ${IMAGE_TAG}"
-                        git push https://github-username:${GITHUB_TOKENS}@github.com/tuhinmiazy73/jenkinsfile-custom-test.git main
-                    """
+                withCredentials([string(credentialsId: 'GITHUB_TOKENS', variable: 'GITHUB_TOKENS')]) {
+                    script {
+                        sh """
+                            git config --global user.email "tuhinmiazy73@example.com"
+                            git config --global user.name "tuhinmiazy73"
+                            git add .
+                            git commit -m "Update Kubernetes manifest with new image tag ${IMAGE_TAG}"
+                        """
+                    }
+                    
                 }
             }
         }
     }
 }
-
